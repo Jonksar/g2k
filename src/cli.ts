@@ -105,10 +105,15 @@ export async function run(argv: string[], deps: CliDeps = {}): Promise<number> {
 
   function cmdInstall(file?: string): number {
     const cfgPath = file ?? configPath()
-    loadConfig(cfgPath) // validate before installing
+    const config = loadConfig(cfgPath) // validate before installing
     const install = deps.install ?? installDaemon
     const g2kBin = (deps.g2kBin ?? resolveG2kBin)()
-    const target = install({ g2kBin, configPath: cfgPath, logDir: defaultLogDir() })
+    // launchd's minimal PATH must be extended so the daemon can find `node` (for the
+    // g2k shebang) and `claude` (spawned by the capture).
+    const pathDirs = [path.dirname(process.execPath), path.dirname(config.claudeBin)].filter((d) =>
+      path.isAbsolute(d),
+    )
+    const target = install({ g2kBin, configPath: cfgPath, logDir: defaultLogDir(), pathDirs })
     io.out(`Installed and loaded launchd daemon: ${target}`)
     return 0
   }
