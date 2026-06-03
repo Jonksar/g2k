@@ -1,0 +1,9 @@
+{
+  "vaultPath": "/path/to/your/obsidian/vault",
+  "claudeBin": "claude",
+  "promptFile": null,
+  "watchFile": "~/Library/Application Support/Granola/granola.db-wal",
+  "outputDir": "meetings",
+  "commit": true,
+  "timing": { "debounceMs": 60000, "settleMs": 180000, "captureTimeoutMs": 1200000 }
+}
