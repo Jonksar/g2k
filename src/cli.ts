@@ -45,12 +45,29 @@ function resolveG2kBin(): string {
   return process.argv[1]
 }
 
+async function readAllStdin(): Promise<string> {
+  const chunks: Buffer[] = []
+  for await (const chunk of stdin) chunks.push(chunk as Buffer)
+  return Buffer.concat(chunks).toString('utf8')
+}
+
 async function readlineAnswers(): Promise<InitAnswers> {
+  // Non-interactive (piped) stdin: readline.question hits EOF and would silently
+  // resolve to nothing, so read all of stdin and take one answer per line instead.
+  if (!stdin.isTTY) {
+    const lines = (await readAllStdin()).split('\n')
+    const vaultPath = (lines[0] ?? '').trim()
+    if (!vaultPath) throw new Error('g2k init: no input on stdin. Run `g2k init` in a terminal, or pipe: printf "<vault>\\n<claudeBin>\\n<promptFile>\\n" | g2k init')
+    const claudeBin = (lines[1] ?? '').trim() || 'claude'
+    const promptFile = (lines[2] ?? '').trim() || undefined
+    return { vaultPath, claudeBin, promptFile }
+  }
   const rl = readline.createInterface({ input: stdin, output: stdout })
   const vaultPath = (await rl.question('Obsidian vault path: ')).trim()
   const claudeBin = (await rl.question('claude binary [claude]: ')).trim() || 'claude'
   const promptFile = (await rl.question('Custom prompt file (blank for bundled default): ')).trim() || undefined
   rl.close()
+  if (!vaultPath) throw new Error('g2k init: a vault path is required')
   return { vaultPath, claudeBin, promptFile }
 }
 

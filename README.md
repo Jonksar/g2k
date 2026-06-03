@@ -32,24 +32,31 @@ cd <your vault> && claude
 The token persists in `~/.claude.json` and is reused headlessly. If captures start
 timing out (`KILLED ... likely Granola MCP auth hang` in the logs), re-run the flow.
 
-## How the watcher works
+## Execution structure
 
-g2k does **not** poll Granola's API. It watches a single local file — Granola's
-write-ahead log:
+g2k is a thin watcher that triggers a Claude Code agent; the agent does all the work.
 
+```mermaid
+flowchart TD
+    Granola["Granola app"] -->|"writes transcript / summary"| WAL["granola.db-wal<br/>(single local file)"]
+    WAL -->|"file change"| Watcher["g2k watcher<br/>(chokidar, polling)"]
+    Watcher -->|"debounce 60s, then settle 180s,<br/>skip if one already running"| Spawn["spawn: claude -p<br/>(cwd = your vault)"]
+    Spawn --> Agent["Claude Code agent"]
+    Agent -->|"tool calls"| MCP["Granola MCP<br/>list_meetings / get_meetings"]
+    Agent -->|"follows the prompt"| Prompt["Prompt steps"]
+    Prompt --> S1["1. discover meetings not yet in the vault"]
+    S1 --> S2["2. write meeting notes into the vault"]
+    S2 --> S3["3. git commit"]
 ```
-~/Library/Application Support/Granola/granola.db-wal
-```
 
-Granola writes to this file whenever it records a transcript or generates a meeting
-summary. g2k watches that exact filename (by polling, so it survives the WAL being
-checkpointed/recreated). When the file goes quiet for `debounceMs` and then settles
-for `settleMs` — i.e. a meeting has ended and Granola has finished its summary — g2k
-fires a single capture. Overlapping triggers are dropped while a capture is in flight.
+**What calls what:**
 
-If Granola changes where it stores its cache, point `watchFile` in the config at the
-new path. Only the *filename being watched* matters to g2k; the actual meeting data is
-fetched by the agent through the Granola MCP.
+1. **Granola** writes to its local write-ahead log, `~/Library/Application Support/Granola/granola.db-wal`, whenever it records a transcript or generates a summary.
+2. **The g2k watcher** (`g2k watch`, run by the launchd daemon) watches that single file — by polling, so it survives the WAL being checkpointed/recreated. After the file goes quiet for `debounceMs` and then settles for `settleMs` (a meeting ended and Granola finished its summary), it fires **one** capture; triggers arriving while a capture is in flight are dropped.
+3. **The capture** spawns `claude -p` with the working directory set to your vault. This matters: the Granola MCP is configured per-project in your vault's `.mcp.json`, so the agent only sees it when launched from the vault.
+4. **The Claude Code agent** uses the **Granola MCP** (`list_meetings` / `get_meetings`) to fetch meeting data, then follows the prompt: discover meetings not already saved, write notes into the vault, and `git commit`.
+
+g2k itself never touches Granola's API and never parses meeting data — it only watches a filename and shells out. If Granola moves its cache, point `watchFile` in the config at the new path.
 
 ## Configuration
 
