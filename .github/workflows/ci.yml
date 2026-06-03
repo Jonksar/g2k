@@ -21,6 +21,13 @@ jobs:
       - run: npm run build
       - name: Fail if build left the tree dirty
         run: git diff --exit-code
+      - name: Smoke-test the globally installed CLI
+        # Catches regressions where the installed bin (a symlink) runs but produces
+        # no output — e.g. a broken "invoked directly" entry guard.
+        run: |
+          npm install -g .
+          g2k --help | grep -q "init"
+          g2k auth | grep -q "/mcp"
   secrets:
     runs-on: ubuntu-latest
     steps:

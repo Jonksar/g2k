@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, readFileSync, realpathSync } from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import readline from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 import { loadConfig, configPath, parseConfig, type Config } from './config.js'
@@ -165,8 +166,22 @@ export async function run(argv: string[], deps: CliDeps = {}): Promise<number> {
   return exitCode
 }
 
-// Only run the CLI when executed directly, not when imported by tests.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+/**
+ * True when this module is the program entry point. Resolves argv[1] through any
+ * symlink (npm installs `g2k` as a bin symlink) before comparing to this module's
+ * URL — a plain string compare would miss the symlink and the CLI would silently
+ * do nothing. False when imported by tests.
+ */
+function invokedDirectly(): boolean {
+  if (!process.argv[1]) return false
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href
+  } catch {
+    return false
+  }
+}
+
+if (invokedDirectly()) {
   run(process.argv).then((code) => {
     process.exitCode = code
   })
