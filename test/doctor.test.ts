@@ -1,43 +1,47 @@
-import { describe, it, expect } from 'vitest'
-import { runChecks, type DoctorDeps } from '../src/doctor.js'
-import type { Config } from '../src/config.js'
+// Journey: the user checks their setup health with `g2k doctor`.
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { run } from '../src/cli.js'
+import { tmpDir, cleanup, ioCapture, writeConfigFile } from './helpers.js'
 
-const config: Config = {
-  vaultPath: '/vault',
-  claudeBin: '/bin/claude',
-  promptFile: null,
-  watchFile: '/wal',
-  outputDir: 'meetings',
-  commit: true,
-  timing: { debounceMs: 1, settleMs: 1, captureTimeoutMs: 1000 },
-}
+let dir: string
+beforeEach(() => { dir = tmpDir() })
+afterEach(() => cleanup(dir))
 
-function deps(over: Partial<DoctorDeps> = {}): DoctorDeps {
-  return {
-    pathExists: () => true,
-    canReadPrompt: () => true,
-    probeMcp: async () => ({ ok: true }),
-    ...over,
-  }
-}
+describe('Journey: health check', () => {
+  it('reports everything healthy and exits 0 when the setup is wired', async () => {
+    const cfgPath = writeConfigFile(dir, { vaultPath: '/my/vault', claudeBin: '/bin/claude' })
+    const c = ioCapture()
+    const code = await run(['node', 'g2k', 'doctor', '--config', cfgPath], {
+      io: c.io,
+      doctorDeps: {
+        pathExists: () => true,
+        canReadPrompt: () => true,
+        probeMcp: async () => ({ ok: true, detail: 'reachable' }),
+      },
+    })
 
-describe('runChecks', () => {
-  it('returns all-ok when everything resolves', async () => {
-    const checks = await runChecks(config, deps())
-    expect(checks.every((c) => c.ok)).toBe(true)
-    expect(checks.map((c) => c.name)).toContain('granola-mcp')
+    expect(code).toBe(0)
+    const out = c.out.join('\n')
+    expect(out).toContain('✓ vault')
+    expect(out).toContain('✓ granola-mcp')
   })
 
-  it('flags a missing vault', async () => {
-    const checks = await runChecks(config, deps({ pathExists: (p) => p !== '/vault' }))
-    const vault = checks.find((c) => c.name === 'vault')!
-    expect(vault.ok).toBe(false)
-  })
+  it('flags a missing vault and an unauthenticated MCP, and exits non-zero', async () => {
+    const cfgPath = writeConfigFile(dir, { vaultPath: '/nope/vault', claudeBin: '/bin/claude' })
+    const c = ioCapture()
+    const code = await run(['node', 'g2k', 'doctor', '--config', cfgPath], {
+      io: c.io,
+      doctorDeps: {
+        pathExists: (p) => !p.startsWith('/nope'),
+        canReadPrompt: () => true,
+        probeMcp: async () => ({ ok: false, detail: 'timed out — likely needs `claude` → /mcp → approve granola' }),
+      },
+    })
 
-  it('flags an MCP auth hang', async () => {
-    const checks = await runChecks(config, deps({ probeMcp: async () => ({ ok: false, detail: 'timed out' }) }))
-    const mcp = checks.find((c) => c.name === 'granola-mcp')!
-    expect(mcp.ok).toBe(false)
-    expect(mcp.detail).toContain('timed out')
+    expect(code).toBe(1)
+    const out = c.out.join('\n')
+    expect(out).toContain('✗ vault')
+    expect(out).toContain('✗ granola-mcp')
+    expect(out).toContain('/mcp') // the user is told how to re-authenticate
   })
 })
