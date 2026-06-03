@@ -1,0 +1,31 @@
+{
+  "name": "g2k",
+  "version": "0.1.0",
+  "description": "Granola to Knowledge — watch Granola for finished meetings and capture them into an Obsidian vault via a claude -p agent.",
+  "type": "module",
+  "bin": { "g2k": "dist/cli.js" },
+  "files": ["dist", "src/prompts/default.md", "config.example.json", "README.md"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "dev": "node --import tsx src/cli.ts"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "commander": "^12.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
