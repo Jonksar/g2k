@@ -12,4 +12,11 @@ export default [
       'no-console': 'off',
     },
   },
+  {
+    // Test files may import symbols purely to verify they are exported (public API surface checks)
+    files: ['test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '.*' }],
+    },
+  },
 ]
