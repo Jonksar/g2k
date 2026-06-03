@@ -33,6 +33,7 @@ export function runCapture(config: Config, deps: CaptureDeps): Promise<CaptureRe
     vault: config.vaultPath,
     today: deps.today,
     outputDir: config.outputDir,
+    commit: config.commit,
   })
   const startedAt = Date.now()
   log('spawning capture agent...')

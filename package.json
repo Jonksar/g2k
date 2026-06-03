@@ -7,7 +7,7 @@
   "files": ["dist", "src/prompts/default.md", "config.example.json", "README.md"],
   "engines": { "node": ">=20" },
   "scripts": {
-    "build": "tsc && cp -R src/prompts dist/prompts",
+    "build": "tsc && cp src/prompts/default.md dist/prompts/default.md",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

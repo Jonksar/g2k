@@ -2,14 +2,11 @@ import chokidar from 'chokidar'
 import { CaptureScheduler } from './scheduler.js'
 import { runCapture } from './capture.js'
 import { loadPromptTemplate } from './prompt.js'
+import { localDate } from './date.js'
 import type { Config } from './config.js'
 
 function log(msg: string): void {
   process.stdout.write(`[${new Date().toISOString()}] ${msg}\n`)
-}
-
-function today(): string {
-  return new Date().toISOString().split('T')[0]
 }
 
 /** Start watching the Granola WAL and capture on meeting end. Runs until the process exits. */
@@ -20,7 +17,7 @@ export function startWatcher(config: Config): void {
     log,
     onCapture: async () => {
       const template = loadPromptTemplate(config)
-      await runCapture(config, { template, today: today(), log })
+      await runCapture(config, { template, today: localDate(), log })
     },
   })
 

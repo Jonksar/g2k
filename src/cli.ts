@@ -8,6 +8,7 @@ import { loadConfig, configPath, parseConfig, type Config } from './config.js'
 import { startWatcher } from './watcher.js'
 import { runCapture } from './capture.js'
 import { loadPromptTemplate } from './prompt.js'
+import { localDate } from './date.js'
 import { runChecks } from './doctor.js'
 import { installDaemon, uninstallDaemon, defaultLogDir } from './daemon/launchd.js'
 
@@ -20,12 +21,8 @@ export function buildInitConfig(answers: { vaultPath: string; claudeBin?: string
   })
 }
 
-function today(): string {
-  return new Date().toISOString().split('T')[0]
-}
-
 function resolveG2kBin(): string {
-  // The installed CLI lives at dist/cli.js; the bin shim is the realpath of argv[1].
+  // Path to the running CLI entry (dist/cli.js, or the npm-global bin symlink). launchd follows symlinks.
   return process.argv[1]
 }
 
@@ -60,7 +57,7 @@ function cmdWatch(file?: string): void {
 async function cmdRun(file?: string): Promise<void> {
   const config = loadConfig(file ?? configPath())
   const template = loadPromptTemplate(config)
-  const result = await runCapture(config, { template, today: today(), log: (m) => console.log(m) })
+  const result = await runCapture(config, { template, today: localDate(), log: (m) => console.log(m) })
   if (result.status !== 'ok') process.exitCode = 1
 }
 

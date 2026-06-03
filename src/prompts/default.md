@@ -28,7 +28,9 @@ STEP 3 — Verify:
 - Re-read each created file to confirm granola-id is present in frontmatter.
 - Run silently — no output to the user.
 
-STEP 4 — Commit (only if files were created or modified):
+STEP 4 — Commit (only if files were created or modified AND committing is enabled):
+- COMMITTING ENABLED: $COMMIT
+- If COMMITTING ENABLED is false, do NOT commit — leave the new/modified files in the working tree for the user to review, and skip the rest of this step.
 - Stage the newly created/modified meeting notes.
 - Commit message format:
     chore: granola capture $TODAY

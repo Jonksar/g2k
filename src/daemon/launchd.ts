@@ -56,6 +56,11 @@ export function installDaemon(opts: PlistOptions): string {
   const target = plistPath()
   mkdirSync(path.dirname(target), { recursive: true })
   writeFileSync(target, renderPlist(opts))
+  try {
+    execFileSync('launchctl', ['unload', target])
+  } catch {
+    // not currently loaded — fine
+  }
   execFileSync('launchctl', ['load', target])
   return target
 }

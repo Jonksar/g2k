@@ -7,14 +7,16 @@ export interface PromptVars {
   vault: string
   today: string
   outputDir: string
+  commit: boolean
 }
 
-/** Substitute $VAULT / $TODAY / $OUTPUT_DIR tokens. Unknown $TOKENS are left as-is. */
+/** Substitute $VAULT / $TODAY / $OUTPUT_DIR / $COMMIT tokens. Unknown $TOKENS are left as-is. */
 export function renderPrompt(template: string, vars: PromptVars): string {
   return template
     .replace(/\$VAULT\b/g, vars.vault)
     .replace(/\$TODAY\b/g, vars.today)
     .replace(/\$OUTPUT_DIR\b/g, vars.outputDir)
+    .replace(/\$COMMIT\b/g, String(vars.commit))
 }
 
 /** Path to the bundled generic prompt shipped with the package. */
